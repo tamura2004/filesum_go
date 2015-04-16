@@ -9,7 +9,7 @@ import (
 	//"strings"
 )
 
-// 情報格納用の木構造
+// 情報格納用
 type SubDir []*Dir
 
 type Dir struct {
@@ -69,7 +69,7 @@ func formatByUnit(size int64) string {
 	return fmt.Sprintf("%d %s", size, unit)
 }
 
-// Collectしたツリー情報を表示
+// 木構造を表示
 func (d *Dir) Display(indent string, isLast bool) {
 	if isLast {
 		fmt.Printf("%s%s%s .. %s\n", indent, "└", d.base, formatByUnit(d.size))
@@ -92,7 +92,7 @@ func (d *Dir) Display(indent string, isLast bool) {
 	}
 }
 
-// ファイルサイズを取得して木構造に格納
+// ファイルサイズを取得しながら木構造
 func (d *Dir) Collect() int64 {
 	f, err := os.Open(d.path)
 	if err != nil {
