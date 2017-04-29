@@ -6,8 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	//"strings"
 )
+
+var progress int = 0
 
 // 情報格納用
 type SubDir []*Dir
@@ -52,13 +53,14 @@ func main() {
 	root.base = filepath.Base(path)
 	root.depth = 0
 	root.Collect()
+	fmt.Println("\n")
 	root.Display("", true)
 }
 
 // ファイルサイズを適切な単位に変換する
 func formatByUnit(size int64) string {
 	unit := "byte"
-	units := []string{"KB", "MB", "GB"}
+	units := []string{"KB", "MB", "GB", "TB", "PB"}
 
 	for _, u := range units {
 		if size >= 1024 {
@@ -92,28 +94,31 @@ func (d *Dir) Display(indent string, isLast bool) {
 	}
 }
 
-// ファイルサイズを取得しながら木構造
+// ファイルサイズを集計
 func (d *Dir) Collect() int64 {
-	f, err := os.Open(d.path)
-	if err != nil {
-		//fmt.Println(err)
-		//fmt.Printf("cannot open %s\n", path)
-		return 0
+	progress += 1
+	if progress%100 == 0 {
+		fmt.Printf("\rsearch %d files", progress)
 	}
 
-	fis, err := f.Readdir(-1)
+	file_handle, err := os.Open(d.path)
+	if err != nil {
+		return 0 // アクセス権限不足で読めなければサイズゼロとみなす
+	}
+
+	nodes, err := file_handle.Readdir(-1)
 	if err != nil {
 		fmt.Println(err)
 		fmt.Printf("cannot get infomation of %s\n", d.path)
 		return 0
 	}
 
-	for _, fi := range fis {
-		if fi.Mode()&os.ModeSymlink != 0 {
-			// do nothing if symbolic link
-		} else if fi.IsDir() {
+	for _, node := range nodes {
+		if node.Mode()&os.ModeSymlink != 0 {
+			// do nothing if symbolic link to prevent infinite loop
+		} else if node.IsDir() {
 			c := new(Dir)
-			c.base = fi.Name()
+			c.base = node.Name()
 			c.path = filepath.Join(d.path, c.base)
 			c.depth = d.depth + 1
 			c.parent = d
@@ -122,8 +127,8 @@ func (d *Dir) Collect() int64 {
 			if size > limit {
 				d.children = append(d.children, c)
 			}
-		} else {
-			d.size += fi.Size()
+		} else { // file
+			d.size += node.Size()
 		}
 	}
 
